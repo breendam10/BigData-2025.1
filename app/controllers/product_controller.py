@@ -1,4 +1,5 @@
 from flask_restx import Namespace, Resource, fields
+from flask import request
 from app.db.cosmos_db import get_cosmos_container
 import uuid
 
@@ -63,3 +64,13 @@ class ProductResource(Resource):
             return "", 204
         except Exception as e:
             return {"error": f"Produto não encontrado. Detalhes do erro: {str(e)}"}, 404
+
+@product_ns.route("/search")
+class ProductSearch(Resource):
+    @product_ns.param('q', 'Termo de busca')
+    def get(self):
+        q = request.args.get('q', '').lower()
+        container = get_cosmos_container()
+        query = f"SELECT * FROM c WHERE CONTAINS(LOWER(c.productName), '{q}')"
+        items = list(container.query_items(query=query, enable_cross_partition_query=True))
+        return {"results": items}, 200

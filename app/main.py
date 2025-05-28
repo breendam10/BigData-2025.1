@@ -1,4 +1,5 @@
 # C:\Users\ianes\Desktop\BigData-2025.1\app\main.py
+
 from flask import Flask
 from app.config import Config
 from app.db.mysql_db import db
@@ -19,12 +20,14 @@ def create_app():
     from app.controllers.product_controller import product_ns
     from app.controllers.address_controller import address_ns
     from app.controllers.credit_card_controller import credit_card_ns
+    from app.controllers.order_controller import order_ns
 
     # As rotas serão /users, /products, /address, /credit_card, etc.
     api.add_namespace(user_ns, path="/users")
     api.add_namespace(product_ns, path="/products")
     api.add_namespace(address_ns, path="/address")
     api.add_namespace(credit_card_ns, path="/credit_card")
+    api.add_namespace(order_ns, path="/orders")
 
     # Registra o Blueprint do bot
     try:
@@ -45,6 +48,3 @@ if __name__ == "__main__":
     for rule in app.url_map.iter_rules():
         print(rule, rule.endpoint)
     app.run(debug=True)
-
-
-#eu amo o ian menezes

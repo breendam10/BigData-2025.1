@@ -4,6 +4,7 @@ from flask import request
 from datetime import datetime
 from app.db.mysql_db import db
 from app.models.credit_card_model import CreditCard
+import uuid
 
 credit_card_ns = Namespace("credit_card", description="Operações relacionadas a cartões de crédito do usuário")
 
@@ -14,12 +15,23 @@ credit_card_model = credit_card_ns.model("CreditCardModel", {
     "saldo": fields.Float(required=True, description="Saldo inicial disponível no cartão")
 })
 
+authorize_purchase_model = credit_card_ns.model("AuthorizePurchaseRequest", {
+    "valor": fields.Float(required=True, description="Valor da compra a ser autorizado", example=99.90)
+})
+
+authorize_response_model = credit_card_ns.model("AuthorizePurchaseResponse", {
+    "status": fields.String(example="AUTHORIZED"),
+    "message": fields.String(example="Cartão autorizado"),
+    "saldo": fields.Float(required=True, example=100.00)
+})
+
 @credit_card_ns.route("/<int:user_id>")
 class CreditCardList(Resource):
     @credit_card_ns.expect(credit_card_model, validate=True)
     @credit_card_ns.response(201, "Cartão criado com sucesso")
     @credit_card_ns.response(400, "Erro ao criar cartão de crédito")
     def post(self, user_id):
+        """Cadastra cartão para um usuário."""
         data = credit_card_ns.payload
         try:
             numero = data["numero"]
@@ -80,3 +92,48 @@ class CreditCardResource(Resource):
         db.session.delete(card)
         db.session.commit()
         return "", 204
+
+@credit_card_ns.route("/<int:user_id>/<int:card_id>/authorize")
+class CreditCardAuthorize(Resource):
+    @credit_card_ns.expect(authorize_purchase_model, validate=True)
+    @credit_card_ns.response(200, "Cartão autorizado", authorize_response_model)
+    @credit_card_ns.response(400, "Cartão não autorizado", authorize_response_model)
+    @credit_card_ns.response(404, "Cartão não encontrado", authorize_response_model)
+    def post(self, user_id, card_id):
+        """
+        Autoriza uma transação de compra em um cartão de crédito do usuário.
+        """
+        data = request.json
+        valor = data.get("valor")
+
+        # Busca cartão do usuário
+        card = CreditCard.query.filter_by(id=card_id, user_id=user_id).first()
+        if not card:
+            return {
+                "status": "NOT_AUTHORIZED",
+                "message": "Cartão não encontrado para o usuário",
+                "saldo": 0
+            }, 404
+
+        # Verifica validade
+        if card.dtExpiracao < datetime.now().date():
+            return {
+                "status": "NOT_AUTHORIZED",
+                "message": "Cartão expirado",
+                "saldo": card.saldo
+            }, 400
+
+        # Verifica saldo suficiente
+        if card.saldo < valor:
+            return {
+                "status": "NOT_AUTHORIZED",
+                "message": "Saldo insuficiente",
+                "saldo": card.saldo
+            }, 400
+
+        # Cartão autorizado
+        return {
+            "status": "AUTHORIZED",
+            "message": "Cartão autorizado",
+            "saldo": card.saldo
+        }, 200
