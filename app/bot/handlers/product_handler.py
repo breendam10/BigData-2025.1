@@ -1,50 +1,47 @@
 # app/bot/handlers/product_handler.py
-from app.db.cosmos_db import get_cosmos_container
-import uuid
+import requests
+from app.bot.adapter import API_URL
 
 async def handle_product_command(turn_context, text):
-    container = get_cosmos_container()
-
     if "listar" in text:
-        # Lista todos os produtos
         try:
-            produtos = list(container.read_all_items())
-            if not produtos:
-                await turn_context.send_activity("Nenhum produto encontrado.")
-                return
-            lista = "\n".join([f"{p['id']}: {p.get('productName','')} - R${p.get('price','')}" for p in produtos])
-            await turn_context.send_activity(f"Produtos cadastrados:\n{lista}")
+            response = requests.get(f"{API_URL}/products")
+            if response.status_code == 200:
+                produtos = response.json().get("products") or []
+                if not produtos:
+                    await turn_context.send_activity("Nenhum produto encontrado.")
+                    return
+                lista = "\n".join([f"{p['id']}: {p.get('productName','')} - R${p.get('price','')}" for p in produtos])
+                await turn_context.send_activity(f"Produtos cadastrados:\n{lista}")
+            else:
+                await turn_context.send_activity("Erro ao listar produtos na API.")
         except Exception as e:
             await turn_context.send_activity(f"Erro ao listar produtos: {str(e)}")
 
     elif "criar" in text:
-        # Exemplo: produto criar nome=Mouse categoria=Periférico preco=99.99
         try:
             partes = text.replace("produto criar", "").strip().split()
             info = {kv.split("=")[0]: kv.split("=")[1] for kv in partes if "=" in kv}
-            name = info.get("nome")
-            cat = info.get("categoria") or info.get("category")
-            preco = info.get("preco") or info.get("price")
-            if not (name and cat and preco):
-                await turn_context.send_activity("Forneça nome, categoria e preco. Exemplo: produto criar nome=Mouse categoria=Periférico preco=99.99")
-                return
-
-            product_id = str(uuid.uuid4())
-            product_doc = {
-                "id": product_id,
-                "productCategory": cat,
-                "productName": name,
-                "price": float(preco),
-                "imageUrl": [],  # Pode expandir se quiser
+            data = {
+                "productCategory": info.get("categoria") or info.get("category"),
+                "productName": info.get("nome"),
+                "price": float(info.get("preco") or info.get("price") or 0),
+                "imageUrl": [],
                 "productDescription": info.get("descricao", "")
             }
-            container.create_item(body=product_doc)
-            await turn_context.send_activity(f"Produto criado: {name} (id {product_id})")
+            if not (data["productCategory"] and data["productName"] and data["price"]):
+                await turn_context.send_activity("Forneça nome, categoria e preco. Exemplo: produto criar nome=Mouse categoria=Periférico preco=99.99")
+                return
+            response = requests.post(f"{API_URL}/products", json=data)
+            if response.status_code == 201:
+                produto = response.json().get("product", {})
+                await turn_context.send_activity(f"Produto criado: {produto.get('productName','N/A')} (id {produto.get('id','?')})")
+            else:
+                await turn_context.send_activity(f"Erro da API: {response.text}")
         except Exception as e:
             await turn_context.send_activity(f"Erro ao criar produto: {str(e)}")
 
     elif "consultar" in text:
-        # Exemplo: produto consultar id=abc123
         try:
             partes = text.split()
             idpart = next((p for p in partes if p.startswith("id=")), None)
@@ -52,13 +49,16 @@ async def handle_product_command(turn_context, text):
                 await turn_context.send_activity("Informe o id. Exemplo: produto consultar id=...")
                 return
             pid = idpart.split("=")[1]
-            produto = container.read_item(item=pid, partition_key=pid)
-            await turn_context.send_activity(f"Produto: {produto['productName']} - R${produto['price']}\nDescrição: {produto.get('productDescription','')}")
+            response = requests.get(f"{API_URL}/products/{pid}")
+            if response.status_code == 200:
+                produto = response.json().get("product", {})
+                await turn_context.send_activity(f"Produto: {produto['productName']} - R${produto['price']}\nDescrição: {produto.get('productDescription','')}")
+            else:
+                await turn_context.send_activity("Produto não encontrado.")
         except Exception as e:
             await turn_context.send_activity(f"Erro ao consultar produto: {str(e)}")
 
     elif "deletar" in text:
-        # Exemplo: produto deletar id=abc123
         try:
             partes = text.split()
             idpart = next((p for p in partes if p.startswith("id=")), None)
@@ -66,8 +66,11 @@ async def handle_product_command(turn_context, text):
                 await turn_context.send_activity("Informe o id. Exemplo: produto deletar id=...")
                 return
             pid = idpart.split("=")[1]
-            container.delete_item(item=pid, partition_key=pid)
-            await turn_context.send_activity(f"Produto {pid} deletado.")
+            response = requests.delete(f"{API_URL}/products/{pid}")
+            if response.status_code == 204:
+                await turn_context.send_activity(f"Produto {pid} deletado.")
+            else:
+                await turn_context.send_activity("Produto não encontrado ou erro ao deletar.")
         except Exception as e:
             await turn_context.send_activity(f"Erro ao deletar produto: {str(e)}")
 
