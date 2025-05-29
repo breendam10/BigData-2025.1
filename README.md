@@ -23,7 +23,7 @@ A API fornece os seguintes endpoints:
 
 ⋆ **users**:
 - ✅ **POST /users** - Cria um usuário
-- ❌ **DELETE /users{user_id}** - Deleta um usuário e todos os seus endereços e cartões
+- ❌ **DELETE /users/{user_id}** - Deleta um usuário e todos os seus endereços e cartões
 - 🔍 **GET /users/{user_id}** - Retorna um usuário pelo seu ID
    
 ⋆ **products**:
