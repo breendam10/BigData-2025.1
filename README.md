@@ -28,7 +28,7 @@ A API fornece os seguintes endpoints:
    
 ⋆ **products**:
 - ✅ **POST /products** - Cria um produto no Cosmos DB
-- 🔍 **GET /products/search** - Retorna um uproduto 
+- 🔍 **GET /products/search** - Retorna um produto 
 - ❌ **DELETE /products/{product_id}** - Deleta um produto no Cosmos DB pelo seu ID
 - 🔍 **GET /products/{product_id}** - Retorna um produto pelo seu ID
    
@@ -41,7 +41,7 @@ A API fornece os seguintes endpoints:
 - ✅ **POST /credit_card/{user_id}** - Cadastra um cartão para um usuário
 - ❌ **DELETE /credit_card/{user_id}/{card_id}** - Deleta um cartão específico de um usuário
 - 🔍 **GET /credit_card/{user_id}/{card_id}** - Retorna um cartão pelo ID 
-- ✅ **POST /credit_card/{user_id}/{card_id}/authorize** - Autoriza uma transação de compra em um cartão de crédito do usuário
+- ✅ **POST /credit_card/{user_id}/{card_id}/authorize** - Autoriza uma transação de compra em um cartão de crédito de um usuário
 
 ⋆ **orders**:
 - ✅ **POST /orders** - Realiza uma compra
