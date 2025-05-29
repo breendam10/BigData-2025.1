@@ -43,7 +43,7 @@ A API fornece os seguintes endpoints:
 - 🔍 **GET /credit_card/{user_id}/{card_id}** - Retorna um cartão pelo ID 
 - ✅ **POST /credit_card/{user_id}/{card_id}/authorize** - Autoriza uma transação de compra em um cartão de crédito do usuário
 
-⋆ **credit_card**:
+⋆ **orders**:
 - ✅ **POST /orders** - Realiza uma compra
 - 🔍 **GET /orders/extract/{user_id}/{card_id}** - Retorna o extrato de compras do cartão do usuário 
 - 🔍 **GET /orders/{user_id}** - Lista todos os pedidos de um usuário
