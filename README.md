@@ -1,4 +1,4 @@
-# 👥 Projeto por realizado por Brenda Mendes, Ian Esteves e Mateus Padilha
+### 👥 Projeto realizado por Brenda Mendes, Ian Esteves e Mateus Padilha
 
 # 🛍️ Chatbot de Compras com API no Azure
 
