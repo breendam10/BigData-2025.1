@@ -20,10 +20,33 @@ O chatbot oferece as seguintes interações:
 
 ### 🌐 API (Web App no Azure)
 A API fornece os seguintes endpoints:
-1. ✅ **POST /compra-produtos** - Realização de compras  
-2. 🔍 **GET /produtos?nome=** - Pesquisa de produtos por nome  
-3. 💳 **GET /extrato-cartao** - Consulta de extrato do cartão  
-4. 📦 **GET /pedidos** - Listagem de pedidos
+
+⋆ **users**:
+   ✅ **POST /users** - Cria um usuário
+   ❌ **DELETE /users{user_id}** - Deleta um usuário e todos os seus endereços e cartões
+   🔍 **GET /users/{user_id}** - Retorna um usuário pelo seu ID
+   
+⋆ **products**:
+   ✅ **POST /products** - Cria um produto no Cosmos DB
+   🔍 **GET /products/search** - Retorna um uproduto 
+   ❌ **DELETE /products/{product_id}** - Deleta um produto no Cosmos DB pelo seu ID
+   🔍 **GET /products/{product_id}** - Retorna um produto pelo seu ID
+   
+⋆ **address**:
+   ✅ **POST /address/{user_id}** - Cria um endereço para o usuário informado
+   ❌ **DELETE /address{user_id}/{address_id}** - Deleta um endereço específico de um usuário
+   🔍 **GET /address/{user_id}/{address_id}** - Retorna um endereço pelo ID e usuário
+
+⋆ **credit_card**:
+   ✅ **POST /credit_card/{user_id}** - Cadastra um cartão para um usuário
+   ❌ **DELETE /credit_card/{user_id}/{card_id}** - Deleta um cartão específico de um usuário
+   🔍 **GET /credit_card/{user_id}/{card_id}** - Retorna um cartão pelo ID 
+   ✅ **POST /credit_card/{user_id}/{card_id}/authorize** - Autoriza uma transação de compra em um cartão de crédito do usuário
+
+⋆ **credit_card**:
+   ✅ **POST /orders** - Realiza uma compra
+   🔍 **GET /orders/extract/{user_id}/{card_id}** - Retorna o extrato de compras do cartão do usuário 
+   🔍 **GET /orders/{user_id}** - Lista todos os pedidos de um usuário
 
 ---
 
@@ -39,9 +62,9 @@ A API fornece os seguintes endpoints:
 
 ## 🚀 Tecnologias Utilizadas
 
-- **Python** 
-- **Microsoft Bot Framework**
+- **Python**
 - **Flask**
+- **Microsoft Bot Framework**
 - **Azure Web App**
 - **Azure SQL Database**
 - **Azure Cosmos DB**
