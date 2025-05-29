@@ -32,8 +32,8 @@ A API fornece os seguintes endpoints:
 - **Frontend**: Interface via Chatbot
 - **Backend**: API REST hospedada como **Web App no Azure**
 - **Banco de Dados**: 
-  - 📘 **Azure SQL Database** (transações e pedidos)
-  - 🔭 **Azure Cosmos DB** (consulta rápida de produtos e histórico)
+  - 📘 **Azure SQL Database** 
+  - 🔭 **Azure Cosmos DB** 
 
 ---
 
@@ -41,9 +41,8 @@ A API fornece os seguintes endpoints:
 
 - **Python** 
 - **Microsoft Bot Framework**
-- **Flask** (para a API)
+- **Flask**
 - **Azure Web App**
 - **Azure SQL Database**
 - **Azure Cosmos DB**
 - **GitHub Actions** 
-
