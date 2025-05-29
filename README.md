@@ -45,9 +45,5 @@ A API fornece os seguintes endpoints:
 - **Azure Web App**
 - **Azure SQL Database**
 - **Azure Cosmos DB**
-- **GitHub Actions** (CI/CD opcional)
-
----
-
-## 📂 Estrutura do Projeto
+- **GitHub Actions** 
 
