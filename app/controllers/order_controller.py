@@ -8,6 +8,7 @@ from app.models.order_model import Order
 from app.models.user_model import User
 from app.models.credit_card_model import CreditCard
 from app.db.cosmos_db import get_cosmos_container
+from sqlalchemy import extract
 
 order_ns = Namespace("orders", description="Operações de pedidos")
 
@@ -81,13 +82,22 @@ class OrderCreate(Resource):
 
         return {"message": "Pedido realizado com sucesso", "order": order.to_dict()}, 201
 
-@order_ns.route("/extract/<int:user_id>/<int:card_id>")
+@order_ns.route("/extract/<int:user_id>/<int:card_id>/<int:month>")
 class CardExtract(Resource):
-    def get(self, user_id, card_id):
+    def get(self, user_id, card_id, month):
         """
-        Extrato de compras de um cartão do usuário.
+        Extrato de compras de um cartão do usuário filtrando pelo mês.
         """
-        orders = Order.query.filter_by(user_id=user_id, card_id=card_id).order_by(Order.dt_pedido.desc()).all()
+        # month deve ser de 1 a 12
+        if not (1 <= month <= 12):
+            return {"error": "Mês inválido. Use um número de 1 a 12."}, 400
+
+        # Filtra por mês usando SQLAlchemy extract
+        orders = Order.query.filter(
+            Order.user_id == user_id,
+            Order.card_id == card_id,
+            extract('month', Order.dt_pedido) == month
+        ).order_by(Order.dt_pedido.desc()).all()
         return {"extrato": [order.to_dict() for order in orders]}
 
 @order_ns.route("/<int:user_id>")
@@ -98,3 +108,14 @@ class OrdersByUser(Resource):
         """
         orders = Order.query.filter_by(user_id=user_id).order_by(Order.dt_pedido.desc()).all()
         return {"pedidos": [order.to_dict() for order in orders]}
+
+@order_ns.route("/<int:user_id>/<int:pedido_id>")
+class OrderById(Resource):
+    def get(self, user_id, pedido_id):
+        """
+        Consulta um pedido pelo ID do usuário e do pedido.
+        """
+        order = Order.query.filter_by(user_id=user_id, id=pedido_id).first()
+        if not order:
+            return {"error": "Pedido não encontrado"}, 404
+        return {"pedido": order.to_dict()}, 200
