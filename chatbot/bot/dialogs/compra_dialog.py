@@ -8,7 +8,7 @@ class CompraDialog:
         stage = state["stage"]
         dados = state["dados"]
 
-        # Quando o usuário clica num cartão:
+        # 0. Se veio clique em botão de cartão (cartao_id=...)
         match_cartao = re.search(r"cartao_id\s*=\s*([a-f0-9\-]+)", text)
         if stage == "compra_cartao" and match_cartao:
             dados["card_id"] = match_cartao.group(1)
@@ -17,13 +17,22 @@ class CompraDialog:
             state["dados"] = {}
             return
 
+        # Ao clicar em "Comprar" no produto, entra aqui:
+        match = re.search(r"comprar\s+id_produto\s*=\s*([a-f0-9\-]+)", text)
+        if match:
+            product_id = match.group(1)
+            state["dados"] = {"product_id": product_id}
+            state["stage"] = "compra_id_user"
+            await turn_context.send_activity("Qual o ID do usuário?")
+            return
+
         # Etapa 1: Pergunta ID do usuário
         if stage == "compra_id_user":
             if not text.strip().isdigit():
                 await turn_context.send_activity("Digite um ID de usuário válido (apenas números).")
                 return
             dados["user_id"] = int(text.strip())
-            # Se já veio do botão, já temos o product_id
+            # AJUSTE PRINCIPAL: só peça o produto SE não veio do botão comprar
             if "product_id" in dados:
                 state["stage"] = "compra_quantidade"
                 await turn_context.send_activity("Qual a quantidade?")
@@ -32,7 +41,7 @@ class CompraDialog:
                 await turn_context.send_activity("Qual o ID do produto?")
             return
 
-        # Etapa 2: Pergunta ID do produto (se necessário)
+        # Etapa 2: Pergunta ID do produto (só se ainda não tem)
         if stage == "compra_id_produto":
             if not text.strip():
                 await turn_context.send_activity("Digite um ID de produto válido.")
@@ -52,19 +61,9 @@ class CompraDialog:
             except ValueError:
                 await turn_context.send_activity("Digite uma quantidade válida (apenas números inteiros positivos).")
                 return
+            # Agora, mostra o Hero Card de cartões!
             state["stage"] = "compra_cartao"
             await self.mostrar_cartoes(turn_context, dados["user_id"], state)
-            return
-
-        # Etapa 4: Pergunta ID do cartão
-        if stage == "compra_cartao":
-            if not text.strip().isdigit():
-                await turn_context.send_activity("Digite um ID de cartão válido (apenas números).")
-                return
-            dados["card_id"] = int(text.strip())
-            await self.efetuar_compra(turn_context, dados)
-            state["stage"] = None
-            state["dados"] = {}
             return
 
         # Comando inicial para iniciar o fluxo de compra
@@ -101,9 +100,9 @@ class CompraDialog:
 
     async def mostrar_cartoes(self, turn_context, user_id, state):
         try:
-            resp = requests.get(f"{API_BASE}/credit_card/list/{user_id}")
+            resp = requests.get(f"{API_BASE}/credit_card/{user_id}")
             if resp.status_code == 200:
-                cartoes = resp.json().get("credit_cards", [])
+                cartoes = resp.json().get("cartoes", [])
                 if not cartoes:
                     await turn_context.send_activity("Nenhum cartão cadastrado para esse usuário.")
                     state["stage"] = None
@@ -112,7 +111,7 @@ class CompraDialog:
                 buttons = [
                     CardAction(
                         type=ActionTypes.im_back,
-                        title=f"************{str(c['numero'][-4:])}",
+                        title=f"************{str(c['numero'])[-4:]}",
                         value=f"cartao_id={c['id']}"
                     )
                     for c in cartoes

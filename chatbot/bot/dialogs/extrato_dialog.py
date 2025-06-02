@@ -141,8 +141,8 @@ class ExtratoDialog:
                 if not extrato:
                     await turn_context.send_activity("Nenhuma compra encontrada para esse cartão/usuário nesse mês.")
                     return
-                msg = "\n".join([f"{p['product_name']}: R${p['total_price']} em {p['dt_pedido']}" for p in extrato])
-                await turn_context.send_activity(f"Extrato do mês {mes}:\n" + msg)
+                msg = "\n\n".join([f"{p['product_name']}: R${p['total_price']} em {p['dt_pedido']}" for p in extrato])
+                await turn_context.send_activity(f"Extrato do mês {mes}:\n\n" + msg)
             else:
                 await turn_context.send_activity("Erro ao buscar extrato.")
         except Exception as e:
