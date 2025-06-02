@@ -66,6 +66,6 @@ A API fornece os seguintes endpoints:
 - **Flask**
 - **Microsoft Bot Framework**
 - **Azure Web App**
-- **Azure SQL Database**
+- **Azure Database for MySQL - Flexible Server**
 - **Azure Cosmos DB**
 - **GitHub Actions** 
