@@ -55,7 +55,7 @@ A API fornece os seguintes endpoints:
 - **Frontend**: Interface via Chatbot
 - **Backend**: API REST hospedada como **Web App no Azure**
 - **Banco de Dados**: 
-  - 📘 **Azure SQL Database** 
+  - 📘 **Azure Database for MySQL - Flexible Server** 
   - 🔭 **Azure Cosmos DB** 
 
 ---
