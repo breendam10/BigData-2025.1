@@ -9,7 +9,7 @@ import uuid
 credit_card_ns = Namespace("credit_card", description="Operações relacionadas a cartões de crédito do usuário")
 
 credit_card_model = credit_card_ns.model("CreditCardModel", {
-    "numero": fields.String(required=True, description="Número do cartão de crédito"),
+    "numero": fields.Integer(required=True, description="Número do cartão de crédito"),
     "dtExpiracao": fields.String(required=True, description="Data de expiração em formato (dd/mm/yyyy)", example="31/12/1990"),
     "cvv": fields.String(required=True, description="Código de segurança do cartão"),
     "saldo": fields.Float(required=True, description="Saldo inicial disponível no cartão")
@@ -40,14 +40,23 @@ class CreditCardList(Resource):
             dt_str = data["dtExpiracao"]
             dt_exp = None
 
+            try:
+                numero_int = int(numero)
+            except ValueError:
+                return {"error": "Número do cartão deve ser um inteiro numérico."}, 400
+
+            if len(str(numero_int)) < 13 or len(str(numero_int)) > 16:
+                return {"error": "Número do cartão deve ter entre 13 e 16 dígitos."}, 400
+
+            exists = CreditCard.query.filter_by(user_id=user_id, numero=numero_int).first()
+            if exists:
+                return {"error": "Esse usuário já possui um cartão com esse número."}, 400
+
             if dt_str:
                 try:
                     dt_exp = datetime.strptime(dt_str, "%d/%m/%Y").date()
                 except ValueError:
                     return {"error": "Formato de data inválido. Use dd/mm/yyyy."}, 400
-
-            if len(numero) != 16 or not numero.isdigit():
-                return {"error": "Número do cartão deve ter 16 dígitos."}, 400
 
             if len(cvv) != 3 or not cvv.isdigit():
                 return {"error": "Número do CVV deve ter 3 dígitos."}, 400

@@ -2,6 +2,7 @@ from bot.dialogs.pedido_dialog import PedidoDialog
 from bot.dialogs.produto_dialog import ProdutoDialog
 from bot.dialogs.extrato_dialog import ExtratoDialog
 from bot.dialogs.compra_dialog import CompraDialog
+from botbuilder.schema import HeroCard, CardAction, ActionTypes, Attachment, Activity
 
 class EcommerceBot:
     def __init__(self):
@@ -37,4 +38,21 @@ class EcommerceBot:
             elif "extrato" in text:
                 await self.extrato_dialog.run(turn_context, state, text)
             else:
-                await turn_context.send_activity("Comando não reconhecido. Tente: pedido, produto, extrato ou comprar.")
+                card = HeroCard(
+                    title="Olá! O que você deseja fazer?",
+                    buttons=[
+                        CardAction(type=ActionTypes.im_back, title="Consultar produtos", value="produto"),
+                        CardAction(type=ActionTypes.im_back, title="Listar pedidos", value="pedido"),
+                        CardAction(type=ActionTypes.im_back, title="Gerar extrato", value="extrato"),
+                    ]
+                )
+                attachment = Attachment(
+                    content_type="application/vnd.microsoft.card.hero",
+                    content=card
+                )
+                await turn_context.send_activity(
+                    Activity(
+                        type="message",
+                        attachments=[attachment]
+                    )
+                )

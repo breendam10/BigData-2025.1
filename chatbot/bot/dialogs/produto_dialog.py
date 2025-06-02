@@ -1,6 +1,7 @@
 import re
 import requests
 from bot.utils import API_BASE
+from botbuilder.schema import HeroCard, CardImage, CardAction, ActionTypes, Attachment, Activity
 
 class ProdutoDialog:
     async def run(self, turn_context, state, text):
@@ -16,15 +17,30 @@ class ProdutoDialog:
                 if not produto:
                     await turn_context.send_activity("Produto não encontrado.")
                 else:
-                    msg = (
-                        f"Produto encontrado:\n"
-                        f"Nome: {produto['productName']}\n"
-                        f"ID: {produto['id']}\n"
-                        f"Preço: R${produto['price']}\n"
-                        f"Categoria: {produto.get('productCategory', 'N/A')}\n"
-                        f"Descrição: {produto.get('productDescription', 'N/A')}"
+                    # Cria um Hero Card com imagem, campos e descrição
+                    card = HeroCard(
+                        title=produto.get('productName', 'Produto'),
+                        subtitle=f"Categoria: {produto.get('productCategory', 'N/A')}",
+                        text=f"Preço: R${produto.get('price', 'N/A')}\n\n{produto.get('productDescription', '')}",
+                        images=[CardImage(url=produto.get('imageUrl', [''])[0])] if produto.get('imageUrl') else [],
+                        buttons=[
+                            CardAction(
+                                type=ActionTypes.im_back,
+                                title="Comprar",
+                                value=f"comprar id_produto={p['id']}"
+                            )
+                        ]
                     )
-                    await turn_context.send_activity(msg)
+                    attachment = Attachment(
+                        content_type="application/vnd.microsoft.card.hero",
+                        content=card
+                    )
+                    await turn_context.send_activity(
+                        Activity(
+                            type="message",
+                            attachments=[attachment]
+                        )
+                    )
             else:
                 await turn_context.send_activity("Produto não encontrado.")
             state["stage"] = None
@@ -51,11 +67,27 @@ class ProdutoDialog:
 
         # 3. Comando inicial
         if text.strip() in ["produto", "produtos"]:
+            card = HeroCard(
+                title="Consulta de produtos",
+                text="Se você já sabe o ID, é só digitá-lo.\n\nOu escolha uma opção:",
+                buttons=[
+                    CardAction(type=ActionTypes.im_back, title="Listar todos", value="listar"),
+                    CardAction(type=ActionTypes.im_back, title="Buscar por nome", value="buscar"),
+                ]
+            )
+            attachment = Attachment(
+                content_type="application/vnd.microsoft.card.hero",
+                content=card
+            )
             await turn_context.send_activity(
-                "Você quer listar todos os produtos ou buscar por nome? (Digite 'listar' ou 'buscar')"
+                Activity(
+                    type="message",
+                    attachments=[attachment]
+                )
             )
             state["stage"] = "produto_listar_ou_buscar"
             return
+
 
         # Fallback: lista todos
         await self.listar(turn_context)
@@ -69,10 +101,36 @@ class ProdutoDialog:
                 if not produtos:
                     await turn_context.send_activity("Nenhum produto cadastrado.")
                     return
-                msg = "\n".join(
-                    [f"{p['productName']} (ID: {p['id']}), R${p['price']}" for p in produtos]
+
+                attachments = []
+                for p in produtos:
+                    card = HeroCard(
+                        title=p.get('productName', 'Produto'),
+                        subtitle=f"Categoria: {p.get('productCategory', 'N/A')}",
+                        text=f"Preço: R${p.get('price', 'N/A')}\n\n{p.get('productDescription', '')}",
+                        images=[CardImage(url=p.get('imageUrl', [''])[0])] if p.get('imageUrl') else [],
+                        buttons=[
+                            CardAction(
+                                type=ActionTypes.im_back,
+                                title="Comprar",
+                                value=f"comprar id_produto={p['id']}"
+                            )
+                        ]
+                    )
+                    attachments.append(
+                        Attachment(
+                            content_type="application/vnd.microsoft.card.hero",
+                            content=card
+                        )
+                    )
+                # Envia todos os cards juntos como um carrossel (ou separadamente, se preferir)
+                await turn_context.send_activity(
+                    Activity(
+                        type="message",
+                        attachments=attachments,
+                        attachment_layout="carousel" if len(attachments) > 1 else None
+                    )
                 )
-                await turn_context.send_activity("Produtos disponíveis:\n" + msg)
             else:
                 await turn_context.send_activity("Erro ao consultar produtos.")
         except Exception as e:
@@ -86,11 +144,37 @@ class ProdutoDialog:
                 if not produtos:
                     await turn_context.send_activity("Nenhum produto encontrado com esse nome.")
                     return
-                msg = "\n".join(
-                    [f"{p['productName']} (ID: {p['id']}), R${p['price']}" for p in produtos]
+
+                attachments = []
+                for p in produtos:
+                    card = HeroCard(
+                        title=p.get('productName', 'Produto'),
+                        subtitle=f"Categoria: {p.get('productCategory', 'N/A')}",
+                        text=f"Preço: R${p.get('price', 'N/A')}\n\n{p.get('productDescription', '')}",
+                        images=[CardImage(url=p.get('imageUrl', [''])[0])] if p.get('imageUrl') else [],
+                        buttons=[
+                            CardAction(
+                                type=ActionTypes.im_back,
+                                title="Comprar",
+                                value=f"comprar id_produto={p['id']}"
+                            )
+                        ]
+                    )
+                    attachments.append(
+                        Attachment(
+                            content_type="application/vnd.microsoft.card.hero",
+                            content=card
+                        )
+                    )
+                await turn_context.send_activity(
+                    Activity(
+                        type="message",
+                        attachments=attachments,
+                        attachment_layout="carousel" if len(attachments) > 1 else None
+                    )
                 )
-                await turn_context.send_activity("Produtos encontrados:\n" + msg)
             else:
                 await turn_context.send_activity("Erro ao consultar produtos.")
         except Exception as e:
             await turn_context.send_activity(f"Erro ao consultar produtos: {str(e)}")
+

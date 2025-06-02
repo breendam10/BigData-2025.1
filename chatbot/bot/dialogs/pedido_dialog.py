@@ -35,8 +35,8 @@ class PedidoDialog:
                 if not pedidos:
                     await turn_context.send_activity("Nenhum pedido encontrado para este usuário.")
                     return
-                msg = "\n".join([f"Pedido {p['id']}: {p['product_name']} (Qtd: {p['quantity']}) - R${p['total_price']}" for p in pedidos])
-                await turn_context.send_activity("Pedidos encontrados:\n" + msg)
+                msg = "\n\n".join([f"Pedido {p['id']}: {p['product_name']} (Qtd: {p['quantity']}) - R${p['total_price']}" for p in pedidos])
+                await turn_context.send_activity("Pedidos encontrados:\n\n" + msg)
             else:
                 await turn_context.send_activity("Erro ao buscar pedidos do usuário.")
         except Exception as e:

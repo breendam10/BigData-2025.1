@@ -1,3 +1,4 @@
+import re
 import requests
 from bot.utils import API_BASE
 
@@ -6,17 +7,32 @@ class CompraDialog:
         stage = state["stage"]
         dados = state["dados"]
 
+        # Ao clicar em "Comprar" no produto, entra aqui:
+        match = re.search(r"comprar\s+id_produto\s*=\s*([a-f0-9\-]+)", text)
+        if match:
+            product_id = match.group(1)
+            state["dados"] = {"product_id": product_id}
+            # Já temos o produto, então pedimos o usuário:
+            state["stage"] = "compra_id_user"
+            await turn_context.send_activity("Qual o ID do usuário?")
+            return
+
         # Etapa 1: Pergunta ID do usuário
         if stage == "compra_id_user":
             if not text.strip().isdigit():
                 await turn_context.send_activity("Digite um ID de usuário válido (apenas números).")
                 return
             dados["user_id"] = int(text.strip())
-            state["stage"] = "compra_id_produto"
-            await turn_context.send_activity("Qual o ID do produto?")
+            # Se já veio do botão, já temos o product_id
+            if "product_id" in dados:
+                state["stage"] = "compra_quantidade"
+                await turn_context.send_activity("Qual a quantidade?")
+            else:
+                state["stage"] = "compra_id_produto"
+                await turn_context.send_activity("Qual o ID do produto?")
             return
 
-        # Etapa 2: Pergunta ID do produto
+        # Etapa 2: Pergunta ID do produto (se necessário)
         if stage == "compra_id_produto":
             if not text.strip():
                 await turn_context.send_activity("Digite um ID de produto válido.")
@@ -68,17 +84,17 @@ class CompraDialog:
             }
             resp = requests.post(f"{API_BASE}/orders", json=payload)
             if resp.status_code == 201:
-                msg = resp.json().get("message", "Pedido realizado com sucesso!")
+                msg = resp.json().get("message", "✅ Pedido realizado com sucesso!")
                 order = resp.json().get("order", {})
                 resumo = (
-                    f"{msg}\n"
-                    f"Produto: {order.get('product_name')}\n"
-                    f"Qtd: {order.get('quantity')}\n"
+                    f"{msg}\n\n"
+                    f"Produto: {order.get('product_name')}\n\n"
+                    f"Qtd: {order.get('quantity')}\n\n"
                     f"Total: R${order.get('total_price')}"
                 )
                 await turn_context.send_activity(resumo)
             else:
-                erro = resp.json().get("error", "Erro ao realizar pedido.")
-                await turn_context.send_activity(f"Erro ao realizar compra: {erro}")
+                erro = resp.json().get("error", "🛑Erro ao realizar pedido.")
+                await turn_context.send_activity(f"🛑Erro ao realizar compra: {erro}")
         except Exception as e:
-            await turn_context.send_activity(f"Erro ao realizar compra: {str(e)}")
+            await turn_context.send_activity(f"🛑Erro ao realizar compra: {str(e)}")

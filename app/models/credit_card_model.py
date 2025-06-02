@@ -6,11 +6,15 @@ class CreditCard(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=False)
-    numero = db.Column(db.String(16), nullable=False)
+    numero = db.Column(db.BigInteger, nullable=False)
     dtExpiracao = db.Column(db.Date, nullable=False)
     cvv = db.Column(db.String(3), nullable=False)
     saldo = db.Column(db.Float, default=0)
 
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'numero', name='uix_user_cartao'),
+    )
+    
     def __init__(self, user_id, numero, dtExpiracao, cvv, saldo):
         self.user_id = user_id
         self.numero = numero
