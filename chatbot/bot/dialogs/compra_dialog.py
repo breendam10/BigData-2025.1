@@ -1,20 +1,20 @@
 import re
 import requests
 from bot.utils import API_BASE
+from botbuilder.schema import HeroCard, CardAction, ActionTypes, Attachment, Activity
 
 class CompraDialog:
     async def run(self, turn_context, state, text):
         stage = state["stage"]
         dados = state["dados"]
 
-        # Ao clicar em "Comprar" no produto, entra aqui:
-        match = re.search(r"comprar\s+id_produto\s*=\s*([a-f0-9\-]+)", text)
-        if match:
-            product_id = match.group(1)
-            state["dados"] = {"product_id": product_id}
-            # Já temos o produto, então pedimos o usuário:
-            state["stage"] = "compra_id_user"
-            await turn_context.send_activity("Qual o ID do usuário?")
+        # Quando o usuário clica num cartão:
+        match_cartao = re.search(r"cartao_id\s*=\s*([a-f0-9\-]+)", text)
+        if stage == "compra_cartao" and match_cartao:
+            dados["card_id"] = match_cartao.group(1)
+            await self.efetuar_compra(turn_context, dados)
+            state["stage"] = None
+            state["dados"] = {}
             return
 
         # Etapa 1: Pergunta ID do usuário
@@ -53,7 +53,7 @@ class CompraDialog:
                 await turn_context.send_activity("Digite uma quantidade válida (apenas números inteiros positivos).")
                 return
             state["stage"] = "compra_cartao"
-            await turn_context.send_activity("Qual o ID do cartão de crédito?")
+            await self.mostrar_cartoes(turn_context, dados["user_id"], state)
             return
 
         # Etapa 4: Pergunta ID do cartão
@@ -98,3 +98,44 @@ class CompraDialog:
                 await turn_context.send_activity(f"🛑Erro ao realizar compra: {erro}")
         except Exception as e:
             await turn_context.send_activity(f"🛑Erro ao realizar compra: {str(e)}")
+
+    async def mostrar_cartoes(self, turn_context, user_id, state):
+        try:
+            resp = requests.get(f"{API_BASE}/credit_card/list/{user_id}")
+            if resp.status_code == 200:
+                cartoes = resp.json().get("credit_cards", [])
+                if not cartoes:
+                    await turn_context.send_activity("Nenhum cartão cadastrado para esse usuário.")
+                    state["stage"] = None
+                    state["dados"] = {}
+                    return
+                buttons = [
+                    CardAction(
+                        type=ActionTypes.im_back,
+                        title=f"************{str(c['numero'][-4:])}",
+                        value=f"cartao_id={c['id']}"
+                    )
+                    for c in cartoes
+                ]
+                card = HeroCard(
+                    title="Selecione um cartão",
+                    text="Selecione um cartão cadastrado pelo usuário, considerando os 4 últimos dígitos:",
+                    buttons=buttons
+                )
+                attachment = Attachment(
+                    content_type="application/vnd.microsoft.card.hero",
+                    content=card
+                )
+                await turn_context.send_activity(Activity(
+                    type="message",
+                    attachments=[attachment]
+                ))
+                # Espera o usuário clicar em um botão!
+            else:
+                await turn_context.send_activity("Erro ao buscar cartões do usuário.")
+                state["stage"] = None
+                state["dados"] = {}
+        except Exception as e:
+            await turn_context.send_activity(f"Erro ao buscar cartões: {str(e)}")
+            state["stage"] = None
+            state["dados"] = {}

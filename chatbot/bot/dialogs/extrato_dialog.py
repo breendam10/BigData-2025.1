@@ -13,7 +13,7 @@ class ExtratoDialog:
     async def run(self, turn_context, state, text):
         stage = state["stage"]
 
-        # 1. Modo comando (IDs e mês juntos na mensagem)
+        # Modo comando: tudo na mensagem
         m_user = re.search(r'id[_\s]?usu[aá]rio\s*=?\s*(\d+)', text)
         m_card = re.search(r'id[_\s]?cart[aã]o\s*=?\s*(\d+)', text)
         m_mes = re.search(r'm[eê]s\s*=?\s*(\d{1,2})', text)
@@ -26,21 +26,24 @@ class ExtratoDialog:
             state["dados"] = {}
             return
 
-        # 2. Diálogo: esperando user_id
+        # Etapa: esperar id_usuario
         if stage == "extrato_id_user":
             state["dados"]["user_id"] = text.strip()
+            # Busca os cartões do usuário e mostra os botões:
             state["stage"] = "extrato_id_card"
-            await turn_context.send_activity("Qual o ID do cartão de crédito para consultar extrato?")
+            await self.mostrar_cartoes(turn_context, state["dados"]["user_id"], state)
             return
 
-        # 3. Diálogo: esperando card_id
-        if stage == "extrato_id_card":
-            state["dados"]["card_id"] = text.strip()
+        # Etapa: esperar clique no cartão
+        match_cartao = re.search(r"cartao_id\s*=\s*([a-f0-9\-]+)", text)
+        if stage == "extrato_id_card" and match_cartao:
+            state["dados"]["card_id"] = match_cartao.group(1)
+            # Agora pede o mês!
             state["stage"] = "extrato_mes"
             await self.enviar_hero_card_meses(turn_context)
             return
 
-        # 4. Diálogo: esperando mês (clicado no card)
+        # Etapa: esperar clique no mês
         if stage == "extrato_mes":
             user_id = state["dados"].get("user_id")
             card_id = state["dados"].get("card_id")
@@ -53,11 +56,52 @@ class ExtratoDialog:
             state["dados"] = {}
             return
 
-        # 5. Comando inicial
+        # Comando inicial
         if "extrato" in text:
             await turn_context.send_activity("Qual o ID do usuário para consultar extrato?")
             state["stage"] = "extrato_id_user"
             return
+
+    async def mostrar_cartoes(self, turn_context, user_id, state):
+        try:
+            resp = requests.get(f"{API_BASE}/credit_card/{user_id}")
+            if resp.status_code == 200:
+                cartoes = resp.json().get("cartoes", [])
+                if not cartoes:
+                    await turn_context.send_activity("Nenhum cartão cadastrado para esse usuário.")
+                    state["stage"] = None
+                    state["dados"] = {}
+                    return
+                buttons = [
+                    CardAction(
+                        type=ActionTypes.im_back,
+                        title=f"************{str(c['numero'])[-4:]}",
+                        value=f"cartao_id={c['id']}"
+                    )
+                    for c in cartoes
+                ]
+                card = HeroCard(
+                    title="Selecione um cartão",
+                    text="Selecione um cartão cadastrado pelo usuário, considerando os 4 últimos dígitos:",
+                    buttons=buttons
+                )
+                attachment = Attachment(
+                    content_type="application/vnd.microsoft.card.hero",
+                    content=card
+                )
+                await turn_context.send_activity(Activity(
+                    type="message",
+                    attachments=[attachment]
+                ))
+            else:
+                await turn_context.send_activity("Erro ao buscar cartões do usuário.")
+                state["stage"] = None
+                state["dados"] = {}
+        except Exception as e:
+            await turn_context.send_activity(f"Erro ao buscar cartões: {str(e)}")
+            state["stage"] = None
+            state["dados"] = {}
+
 
     async def enviar_hero_card_meses(self, turn_context):
         buttons = [
@@ -97,8 +141,8 @@ class ExtratoDialog:
                 if not extrato:
                     await turn_context.send_activity("Nenhuma compra encontrada para esse cartão/usuário nesse mês.")
                     return
-                msg = "\n\n".join([f"{p['product_name']}: R${p['total_price']} em {p['dt_pedido']}" for p in extrato])
-                await turn_context.send_activity(f"Extrato do mês {mes}:\n\n" + msg)
+                msg = "\n".join([f"{p['product_name']}: R${p['total_price']} em {p['dt_pedido']}" for p in extrato])
+                await turn_context.send_activity(f"Extrato do mês {mes}:\n" + msg)
             else:
                 await turn_context.send_activity("Erro ao buscar extrato.")
         except Exception as e:

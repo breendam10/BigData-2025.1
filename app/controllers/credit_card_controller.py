@@ -9,7 +9,7 @@ import uuid
 credit_card_ns = Namespace("credit_card", description="Operações relacionadas a cartões de crédito do usuário")
 
 credit_card_model = credit_card_ns.model("CreditCardModel", {
-    "numero": fields.Integer(required=True, description="Número do cartão de crédito"),
+    "numero": fields.Integer(required=True, description="Número do cartão de crédito", example=123123412341234),
     "dtExpiracao": fields.String(required=True, description="Data de expiração em formato (dd/mm/yyyy)", example="31/12/1990"),
     "cvv": fields.String(required=True, description="Código de segurança do cartão"),
     "saldo": fields.Float(required=True, description="Saldo inicial disponível no cartão")
@@ -79,6 +79,16 @@ class CreditCardList(Resource):
         except Exception as e:
             db.session.rollback()
             return {"error": str(e)}, 400
+
+    @credit_card_ns.response(200, "Lista de cartões retornada com sucesso")
+    def get(self, user_id):
+        """
+        Retorna todos os cartões de crédito de um usuário.
+        """
+        cards = CreditCard.query.filter_by(user_id=user_id).all()
+        return {
+            "cartoes": [card.to_dict() for card in cards]
+        }, 200
 
 @credit_card_ns.route("/<int:user_id>/<int:card_id>")
 class CreditCardResource(Resource):
