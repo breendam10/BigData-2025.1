@@ -2,7 +2,7 @@
 
 ### 👥 Projeto realizado por: 
 - **Brenda Mendes** | 202209150008
-- **Ian Esteves** |
+- **Ian Esteves** | 202302937314
 - **Mateus Padilha** | 202308065361
 
 Este projeto implementa um **Chatbot inteligente** integrado com uma **API hospedada no Azure**, permitindo que usuários realizem consultas e compras de produtos de forma rápida e intuitiva. A solução é sustentada por um banco de dados na nuvem, utilizando **Azure SQL** e **Cosmos DB**.
